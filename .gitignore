@@ -1,0 +1,13 @@
+# Environment files
+.env
+.env.*
+
+
+# Devin folder
+.devin/
+
+# Kiro folder
+.kiro/
+
+# Node modules
+node_modules/
