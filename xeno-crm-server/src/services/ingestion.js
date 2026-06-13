@@ -1,5 +1,7 @@
 import Shopper from '../models/Shopper.js';
 import Order from '../models/Order.js';
+import { generalQueue } from '../lib/queue.js';
+import { attributeOrder } from './attributionEngine.js';
 
 export async function ingestShoppers(records, marketerId) {
   let totalAccepted = 0;
@@ -59,7 +61,7 @@ export async function ingestOrders(records, marketerId) {
         continue;
       }
 
-      await Order.findOneAndUpdate(
+      const savedOrder = await Order.findOneAndUpdate(
         { externalId: record.externalId, marketerId },
         {
           $set: {
@@ -75,8 +77,15 @@ export async function ingestOrders(records, marketerId) {
       );
 
       totalAccepted++;
-      // TODO: Enqueue attribution check here once AttributionEngine is implemented
-      // generalQueue.add(() => attributeOrder(order));
+      
+      // Enqueue attribution check
+      generalQueue.add(async () => {
+        try {
+          await attributeOrder(savedOrder);
+        } catch (e) {
+          console.error('Attribution check failed for order:', e.message);
+        }
+      });
     } catch (error) {
       rejections.push({ index: i, reason: error.message });
       totalRejected++;

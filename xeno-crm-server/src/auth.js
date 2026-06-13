@@ -6,12 +6,18 @@ export const signToken = (marketerId, email) => {
 };
 
 export const withAuth = (req, res, next) => {
+  let token = null;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    // Support for EventSource which cannot set custom headers easily
+    token = req.query.token;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const payload = jwt.verify(token, config.JWT_SECRET);
     req.marketerId = payload.sub;
