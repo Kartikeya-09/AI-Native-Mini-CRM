@@ -5,9 +5,13 @@ let openaiClient = null;
 
 function getOpenAIClient() {
   if (!openaiClient) {
-    openaiClient = new OpenAI({
+    const clientOptions = {
       apiKey: config.OPENAI_API_KEY,
-    });
+    };
+    if (config.OPENAI_BASE_URL) {
+      clientOptions.baseURL = config.OPENAI_BASE_URL;
+    }
+    openaiClient = new OpenAI(clientOptions);
   }
   return openaiClient;
 }

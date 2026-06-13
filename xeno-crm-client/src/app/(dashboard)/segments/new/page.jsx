@@ -22,7 +22,7 @@ export default function NewSegmentPage() {
   const handleAnalyze = async (e) => {
     e.preventDefault();
     if (!prompt.trim()) return;
-    
+
     setIsAnalyzing(true);
     setClarificationQuestion('');
     setFilterCriteria(null);
@@ -38,7 +38,7 @@ export default function NewSegmentPage() {
         setClarificationQuestion(res.question);
       } else {
         setFilterCriteria(res.filterCriteria);
-        setHumanReadableSummary(res.humanReadableSummary);
+        setHumanReadableSummary(res.humanReadableSummary || '');
       }
     } catch (err) {
       alert(err.message);
@@ -47,8 +47,22 @@ export default function NewSegmentPage() {
     }
   };
 
+  const safeStringify = (obj, indent = 2) => {
+    const cache = new Set();
+    return JSON.stringify(obj, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (cache.has(value)) {
+          return '[Circular]';
+        }
+        cache.add(value);
+      }
+      return value;
+    }, indent);
+  };
+
   const handleSave = async () => {
     if (!segmentName.trim() || !filterCriteria) return;
+    console.log('Saving segment:', { segmentName, filterCriteria });
     setIsSaving(true);
     try {
       await apiFetch('/api/segments', {
@@ -57,6 +71,7 @@ export default function NewSegmentPage() {
       });
       router.push('/segments');
     } catch (err) {
+      console.error('Save error:', err);
       alert(err.message);
     } finally {
       setIsSaving(false);
@@ -75,7 +90,7 @@ export default function NewSegmentPage() {
       <div className="bg-neutral-900/40 border border-white/5 rounded-3xl p-8 backdrop-blur-xl">
         <form onSubmit={handleAnalyze} className="relative">
           <textarea
-            value={prompt}
+            value={String(prompt || '')}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="e.g., 'Find shoppers from New York who spent more than $500 last month on electronics...'"
             className="w-full bg-black/50 border border-white/10 rounded-2xl p-6 pr-32 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[160px] resize-none"
@@ -97,7 +112,7 @@ export default function NewSegmentPage() {
           </div>
           <div>
             <h3 className="text-amber-400 font-medium mb-1">Clarification Needed</h3>
-            <p className="text-amber-200/80">{clarificationQuestion}</p>
+            <p className="text-amber-200/80">{String(clarificationQuestion)}</p>
           </div>
         </div>
       )}
@@ -106,13 +121,13 @@ export default function NewSegmentPage() {
         <div className="bg-neutral-900/40 border border-white/5 rounded-3xl p-8 backdrop-blur-xl space-y-8 animate-in fade-in zoom-in duration-500">
           <div>
             <h3 className="text-lg font-medium text-white mb-2">Interpretation</h3>
-            <p className="text-neutral-300 bg-white/5 p-4 rounded-xl border border-white/5">{humanReadableSummary}</p>
+            <p className="text-neutral-300 bg-white/5 p-4 rounded-xl border border-white/5">{String(humanReadableSummary || '')}</p>
           </div>
 
           <div>
             <h3 className="text-lg font-medium text-white mb-4">Generated Logic</h3>
             <div className="bg-black/50 p-6 rounded-xl border border-white/10 font-mono text-sm text-neutral-300 overflow-x-auto">
-              <pre>{JSON.stringify(filterCriteria, null, 2)}</pre>
+              <pre>{typeof filterCriteria === 'object' ? safeStringify(filterCriteria) : String(filterCriteria || '')}</pre>
             </div>
           </div>
 
@@ -121,18 +136,19 @@ export default function NewSegmentPage() {
               <label className="block text-sm font-medium text-neutral-400 mb-2">Save Segment As</label>
               <input
                 type="text"
-                value={segmentName}
-                onChange={e => setSegmentName(e.target.value)}
+                value={typeof segmentName === 'string' ? segmentName : String(segmentName || '')}
+                onChange={e => setSegmentName(String(e.target.value))}
                 placeholder="e.g., High-Value NY Electronics Buyers"
                 className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50"
               />
             </div>
             <button
               onClick={handleSave}
-              disabled={isSaving || !segmentName.trim()}
+              disabled={isSaving || !segmentName?.trim()}
               className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-medium px-8 py-3 rounded-xl transition-all flex items-center gap-2 h-[50px] whitespace-nowrap"
             >
-              <Save size={18} /> {isSaving ? 'Saving...' : 'Save Segment'}
+              <Save size={18} />
+              {isSaving ? 'Saving...' : 'Save Segment'}
             </button>
           </div>
         </div>

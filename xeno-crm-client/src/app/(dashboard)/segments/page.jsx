@@ -51,14 +51,14 @@ export default function SegmentsPage() {
                 <td className="px-6 py-4">
                   <div className="font-medium text-white flex items-center gap-2">
                     <Filter size={16} className="text-indigo-500" />
-                    {s.name}
+                    {String(s.name || '')}
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2 flex-wrap">
                     {s.filterCriteria?.clauses?.slice(0, 2).map((c, i) => (
                       <span key={i} className="px-2 py-1 rounded bg-white/5 border border-white/10 text-xs">
-                        {c.field} {c.operator} {c.value}
+                        {String(c.field || typeof c.field === 'object' ? JSON.stringify(c.field) : c.field || '')} {String(c.operator || typeof c.operator === 'object' ? JSON.stringify(c.operator) : c.operator || '')} {String(c.value !== undefined && c.value !== null ? (typeof c.value === 'object' ? JSON.stringify(c.value) : c.value) : '')}
                       </span>
                     ))}
                     {s.filterCriteria?.clauses?.length > 2 && (

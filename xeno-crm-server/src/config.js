@@ -25,7 +25,9 @@ const config = {
   CHANNEL_SERVICE_URL: process.env.CHANNEL_SERVICE_URL,
   CHANNEL_SERVICE_TOKEN: process.env.CHANNEL_SERVICE_TOKEN,
   REACH_RECEIPT_URL: process.env.REACH_RECEIPT_URL,
-  ATTRIBUTION_WINDOW_DAYS: parseInt(process.env.ATTRIBUTION_WINDOW_DAYS || '7', 10)
+  ATTRIBUTION_WINDOW_DAYS: parseInt(process.env.ATTRIBUTION_WINDOW_DAYS || '7', 10),
+  OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL
 };
 
 export { config };

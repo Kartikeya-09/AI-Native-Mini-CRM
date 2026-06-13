@@ -89,7 +89,7 @@ export default function ShoppersPage() {
                         {s.orderCount || 0} orders
                       </div>
                       <div className="text-emerald-400 font-medium">
-                        ${(s.totalSpend || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${(s.totalSpent || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
                       </div>
                       {s.lastOrderDate && (
                         <div className="text-xs text-neutral-500">

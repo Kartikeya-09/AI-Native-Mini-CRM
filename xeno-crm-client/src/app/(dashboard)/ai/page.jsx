@@ -39,7 +39,7 @@ export default function AICopilotPage() {
         // First request: Generate Intent
         const res = await apiFetch('/api/ai/campaign-intent', {
           method: 'POST',
-          body: JSON.stringify({ prompt: userText, history: messages.map(m => m.text) })
+          body: JSON.stringify({ prompt: userText, history: messages.map(m => ({ role: m.role, content: m.text })) })
         });
         
         setCurrentPlan(res);
@@ -48,7 +48,7 @@ export default function AICopilotPage() {
         // Subsequent request: Revise Plan
         const res = await apiFetch('/api/ai/revise-plan', {
           method: 'POST',
-          body: JSON.stringify({ plan: currentPlan, feedback: userText, history: messages.map(m => m.text) })
+          body: JSON.stringify({ plan: currentPlan, feedback: userText, history: messages.map(m => ({ role: m.role, content: m.text })) })
         });
         
         setCurrentPlan(res);
@@ -63,6 +63,39 @@ export default function AICopilotPage() {
 
   const handleLaunch = async () => {
     if (!currentPlan) return;
+
+    // Validate plan has required fields
+    const validChannels = ['email', 'sms', 'push'];
+    const channelMappings = {
+      'whatsapp': 'sms',
+      'telegram': 'sms',
+      'text': 'sms',
+      'message': 'sms',
+      'notification': 'push',
+      'notifications': 'push',
+      'mobile': 'push',
+      'app': 'push',
+      'mail': 'email',
+    };
+
+    if (!currentPlan.name || !currentPlan.channel || !currentPlan.template || !currentPlan.segmentCriteria) {
+      alert('Plan is missing required fields. Please regenerate the plan.');
+      return;
+    }
+
+    // Normalize and validate channel
+    const normalizedChannel = currentPlan.channel.toLowerCase().trim();
+    let finalChannel = normalizedChannel;
+
+    if (validChannels.includes(normalizedChannel)) {
+      finalChannel = normalizedChannel;
+    } else if (channelMappings[normalizedChannel]) {
+      finalChannel = channelMappings[normalizedChannel];
+    } else {
+      alert(`Invalid channel: ${currentPlan.channel}. Valid channels are: email, sms, push`);
+      return;
+    }
+
     setIsLaunching(true);
     try {
       // 1. Save Segment
@@ -80,14 +113,14 @@ export default function AICopilotPage() {
         body: JSON.stringify({
           name: currentPlan.name,
           segmentId: segment._id,
-          channel: currentPlan.channel,
+          channel: finalChannel,
           messageTemplate: currentPlan.template
         })
       });
 
       // 3. Launch
       await apiFetch(`/api/campaigns/${campaign._id}/launch`, { method: 'POST' });
-      
+
       alert('Campaign launched successfully!');
       router.push('/campaigns');
     } catch (err) {

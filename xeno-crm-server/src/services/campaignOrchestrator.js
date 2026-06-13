@@ -14,6 +14,72 @@ import { config } from '../config.js';
  * @param {string} marketerId - Marketer ObjectId
  * @returns {{ message: string, audienceCount: number }}
  */
+
+// Internal channel simulator — replaces external HTTP call
+async function simulateChannelDispatch(payload) {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, Math.random() * 300 + 100));
+  
+  // Simulate 90% success rate
+  const success = Math.random() > 0.1;
+  
+  if (!success) {
+    return { ok: false };
+  }
+
+  const trackingId = `track_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Simulate async callbacks (delivered, opened, clicked) after delay
+  setTimeout(async () => {
+    try {
+      const { default: Message } = await import('../models/Message.js');
+      const { default: CampaignStats } = await import('../models/CampaignStats.js');
+      
+      const msg = await Message.findOne({ channelTrackingId: trackingId });
+      if (!msg) return;
+
+      // Simulate delivered
+      await Message.findByIdAndUpdate(msg._id, {
+        $set: { status: 'delivered', statusOrder: 2, statusUpdatedAt: new Date() }
+      });
+      await CampaignStats.findOneAndUpdate(
+        { campaignId: msg.campaignId },
+        { $inc: { delivered: 1 }, $set: { lastUpdated: new Date() } }
+      );
+
+      // 70% chance opened
+      if (Math.random() > 0.3) {
+        setTimeout(async () => {
+          await Message.findByIdAndUpdate(msg._id, {
+            $set: { status: 'opened', statusOrder: 3, statusUpdatedAt: new Date() }
+          });
+          await CampaignStats.findOneAndUpdate(
+            { campaignId: msg.campaignId },
+            { $inc: { opened: 1 }, $set: { lastUpdated: new Date() } }
+          );
+
+          // 40% chance clicked
+          if (Math.random() > 0.6) {
+            setTimeout(async () => {
+              await Message.findByIdAndUpdate(msg._id, {
+                $set: { status: 'clicked', statusOrder: 4, statusUpdatedAt: new Date() }
+              });
+              await CampaignStats.findOneAndUpdate(
+                { campaignId: msg.campaignId },
+                { $inc: { clicked: 1 }, $set: { lastUpdated: new Date() } }
+              );
+            }, Math.random() * 3000 + 1000);
+          }
+        }, Math.random() * 3000 + 1000);
+      }
+    } catch (err) {
+      console.error('Callback simulation error:', err.message);
+    }
+  }, Math.random() * 2000 + 500);
+
+  return { ok: true, json: async () => ({ trackingId }) };
+}
+
 async function launchCampaign(campaignId, marketerId) {
   // 1. Load campaign + segment
   const campaign = await Campaign.findOne({ _id: campaignId, marketerId });
@@ -99,20 +165,14 @@ async function launchCampaign(campaignId, marketerId) {
         const [personalizedBody] = personalise(campaign.messageTemplate, [shopper]);
 
         // Send via channel service
-        const response = await fetch(`${config.CHANNEL_SERVICE_URL}/send`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.CHANNEL_SERVICE_TOKEN}`,
-          },
-          body: JSON.stringify({
+        // Send via internal channel simulator
+          const response = await simulateChannelDispatch({
             channel: campaign.channel,
             to: shopper.email,
             body: personalizedBody,
             messageId: msg._id.toString(),
             campaignId: campaign._id.toString(),
-          }),
-        });
+          });
 
         if (response.ok) {
           const data = await response.json();

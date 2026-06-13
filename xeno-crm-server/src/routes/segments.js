@@ -17,16 +17,22 @@ router.post('/', withAuth, async (req, res) => {
       return res.status(400).json({ error: 'Filter criteria is required' });
     }
 
+    // ← ADD THIS: evaluate segment count before saving
+    console.log('Evaluating segment for marketerId:', req.marketerId);
+    const { matchingCount } = await evaluateSegment(filterCriteria, req.marketerId);
+    console.log('Matching count:', matchingCount);
+
     const segment = new Segment({
       marketerId: req.marketerId,
       name,
       filterCriteria,
-      shopperCountAtSave: 0
+      shopperCountAtSave: matchingCount  // ← was hardcoded 0, now dynamic
     });
 
     const savedSegment = await segment.save();
     res.status(201).json(savedSegment);
   } catch (error) {
+    console.error('Segment save error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -49,8 +55,10 @@ router.post('/evaluate', withAuth, async (req, res) => {
     if (!filterCriteria) {
       return res.status(400).json({ error: 'Filter criteria is required' });
     }
-
+    console.log('Evaluating segment for marketerId:', req.marketerId);
+    console.log('Filter criteria:', JSON.stringify(filterCriteria, null, 2));
     const result = await evaluateSegment(filterCriteria, req.marketerId);
+    console.log('Result:', result);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });

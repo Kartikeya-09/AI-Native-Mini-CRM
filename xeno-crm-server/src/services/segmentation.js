@@ -72,6 +72,13 @@ function buildClausePipeline(clause) {
       return buildProductCategoryClause(clause);
     case 'days_since_last_order':
       return buildDaysSinceLastOrderClause(clause);
+     // ← ADD THESE NEW CASES
+    case 'equals':
+      return [{ $match: { [`attributes.${clause.field?.split('.').pop() || clause.field}`]: clause.value } }];
+    case 'lastOrderDate':
+      return buildLastOrderDateClause({ op: clause.operator === 'lt' ? 'before' : 'after', value: clause.value?.value || clause.value });
+    case 'totalSpent':
+      return buildTotalSpendClause({ min: clause.operator === 'gt' ? clause.value : undefined, max: clause.operator === 'lt' ? clause.value : undefined });
     default:
       throw new Error(`Unknown clause type: ${clause.type}`);
   }
@@ -136,13 +143,13 @@ function buildOrderCountClause(clause) {
 
   if (dateRange && dateRange.from) {
     filterConditions.push({
-      $gte: ['$$o.orderedAt', new Date(dateRange.from)]
+      $gte: ['$$order.orderedAt', new Date(dateRange.from)]  // ← $$o → $$order
     });
   }
 
   if (dateRange && dateRange.to) {
     filterConditions.push({
-      $lte: ['$$o.orderedAt', new Date(dateRange.to)]
+      $lte: ['$$order.orderedAt', new Date(dateRange.to)]    // ← $$o → $$order
     });
   }
 
@@ -164,7 +171,7 @@ function buildOrderCountClause(clause) {
           $size: {
             $filter: {
               input: '$orders',
-              as: 'o',
+              as: 'order',                                    // ← 'o' → 'order'
               cond: { $and: filterConditions }
             }
           }
@@ -200,13 +207,13 @@ function buildTotalSpendClause(clause) {
 
   if (dateRange && dateRange.from) {
     filterConditions.push({
-      $gte: ['$$o.orderedAt', new Date(dateRange.from)]
+      $gte: ['$$order.orderedAt', new Date(dateRange.from)]  // ← $$o → $$order
     });
   }
 
   if (dateRange && dateRange.to) {
     filterConditions.push({
-      $lte: ['$$o.orderedAt', new Date(dateRange.to)]
+      $lte: ['$$order.orderedAt', new Date(dateRange.to)]    // ← $$o → $$order
     });
   }
 
@@ -229,12 +236,12 @@ function buildTotalSpendClause(clause) {
             input: {
               $filter: {
                 input: '$orders',
-                as: 'o',
+                as: 'order',                                  // ← 'o' → 'order'
                 cond: { $and: filterConditions }
               }
             },
             initialValue: 0,
-            in: { $add: ['$$value', '$$o.totalAmount'] }
+            in: { $add: ['$$value', '$$this.totalAmount'] }
           }
         }
       }
@@ -246,7 +253,7 @@ function buildTotalSpendClause(clause) {
           $reduce: {
             input: '$orders',
             initialValue: 0,
-            in: { $add: ['$$value', '$$o.totalAmount'] }
+            in: { $add: ['$$value', '$$this.totalAmount'] }
           }
         }
       }
@@ -341,10 +348,14 @@ function buildDaysSinceLastOrderClause(clause) {
 
 async function evaluateSegment(filterCriteria, marketerId) {
   const pipeline = buildAggregationPipeline(filterCriteria, marketerId);
-  
+
+  console.log('Segment pipeline:', JSON.stringify(pipeline, null, 2));
+
   const results = await Shopper.aggregate(pipeline);
   const shopperIds = results.map(shopper => shopper._id);
   const matchingCount = shopperIds.length;
+
+  console.log('Segment results:', matchingCount, 'shoppers matched');
 
   return { matchingCount, shopperIds };
 }

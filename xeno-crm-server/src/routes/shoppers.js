@@ -2,6 +2,7 @@ import express from 'express';
 import { ingestShoppers } from '../services/ingestion.js';
 import { withAuth } from '../auth.js';
 import Shopper from '../models/Shopper.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -20,34 +21,67 @@ router.post('/batch', withAuth, async (req, res) => {
 
 router.get('/', withAuth, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
+    const skip  = (page - 1) * limit;
 
-    const query = { marketerId: req.marketerId };
-    
-    // Optional basic search filter
+    const matchStage = { marketerId: new mongoose.Types.ObjectId(req.marketerId) };
+
+    // Optional search filter
     if (req.query.q) {
       const searchRegex = new RegExp(req.query.q, 'i');
-      query.$or = [
+      matchStage.$or = [
         { firstName: searchRegex },
-        { lastName: searchRegex },
-        { email: searchRegex }
+        { lastName:  searchRegex },
+        { email:     searchRegex }
       ];
     }
 
-    const shoppers = await Shopper.find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const [result] = await Shopper.aggregate([
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
+      {
+        $facet: {
+          // Get paginated shoppers with order summary
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $lookup: {
+                from: 'orders',
+                localField: '_id',
+                foreignField: 'shopperId',
+                as: 'orders'
+              }
+            },
+            {
+              $addFields: {
+                orderCount: { $size: '$orders' },
+                totalSpent: {
+                  $reduce: {
+                    input: '$orders',
+                    initialValue: 0,
+                    in: { $add: ['$$value', '$$this.totalAmount'] }
+                  }
+                }
+              }
+            },
+            { $unset: 'orders' } // remove full orders array, keep only summary
+          ],
+          // Get total count
+          total: [{ $count: 'count' }]
+        }
+      }
+    ]);
 
-    const total = await Shopper.countDocuments(query);
+    const total = result.total[0]?.count || 0;
 
     res.json({
-      data: shoppers,
+      data: result.data,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) }
     });
   } catch (error) {
+    console.error('Shoppers route error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
