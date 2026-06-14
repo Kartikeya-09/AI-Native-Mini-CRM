@@ -20,7 +20,14 @@ import CampaignStats from './models/CampaignStats.js';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://ai-native-mini-crm.vercel.app',
+    /\.vercel\.app$/
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
