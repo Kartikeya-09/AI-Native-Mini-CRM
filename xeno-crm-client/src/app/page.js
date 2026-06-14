@@ -180,9 +180,15 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <button className={`w-full py-3 rounded-xl font-medium transition-all active:scale-95 ${plan.name === "Growth" ? "bg-indigo-500 hover:bg-indigo-600 text-white" : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"}`}>
-                    {plan.name === "Enterprise" ? "Contact Sales" : "Get Started"}
-                  </button>
+                  {plan.name === "Enterprise" ? (
+                    <button className="w-full py-3 rounded-xl font-medium transition-all active:scale-95 bg-white/5 hover:bg-white/10 border border-white/10 text-white">
+                      Contact Sales
+                    </button>
+                  ) : (
+                    <Link href="/register" className={`w-full py-3 rounded-xl font-medium transition-all active:scale-95 flex items-center justify-center ${plan.name === "Growth" ? "bg-indigo-500 hover:bg-indigo-600 text-white" : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"}`}>
+                      Get Started
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import { setToken } from '../../../lib/auth';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -26,7 +27,8 @@ export default function RegisterPage() {
 
       if (!res.ok) throw new Error(data.error || 'Registration failed');
 
-      router.push('/login');
+      setToken(data.token);
+      router.push('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
