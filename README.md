@@ -1,5 +1,5 @@
 # 🧠 AI-Native Mini CRM
-### Built for Xeno Engineering Take-Home Assignment
+
 
 A production-grade, AI-native Mini CRM that helps retail and D2C brands intelligently reach their shoppers. Marketers describe their intent in plain English — the AI handles segmentation, message drafting, campaign dispatch, and performance tracking.
 
@@ -267,9 +267,9 @@ Key insight: AI tools are force multipliers, not replacements. Every architectur
 
 ---
 
-## 📬 Submission
 
-Built by **Kartikeya Kaushal** for Xeno FDE Role — June 2026
+
+Built by **Kartikeya Kaushal** 
 
 - GitHub: [github.com/Kartikeya-09](https://github.com/Kartikeya-09)
 - Email: kaushalkartikeya733@gmail.com
